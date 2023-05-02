@@ -16,7 +16,7 @@ app.listen(PORT, () => {
 const token = '5996933740:AAFI7r5WTXdljEABkbnZxoWRPYBRVo9ryJU';
 // const tokenTest = '6047223613:AAG-Tl6tAZ_fMylILOnG71F_AqA50t1uJWY';
 
-const bot = new TelegramAPI(tokenTest, { polling: true });
+const bot = new TelegramAPI(token, { polling: true });
 
 bot.setMyCommands([
   { command: '/digest', description: 'Короткий опис останньої зустрічі' },
