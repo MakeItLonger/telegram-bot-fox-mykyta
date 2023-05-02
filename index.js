@@ -1,4 +1,5 @@
 const TelegramAPI = require('node-telegram-bot-api');
+const axios = require('axios');
 
 const express = require('express');
 const app = express();
@@ -15,12 +16,13 @@ app.listen(PORT, () => {
 const token = '5996933740:AAFI7r5WTXdljEABkbnZxoWRPYBRVo9ryJU';
 // const tokenTest = '6047223613:AAG-Tl6tAZ_fMylILOnG71F_AqA50t1uJWY';
 
-const bot = new TelegramAPI(token, { polling: true });
+const bot = new TelegramAPI(tokenTest, { polling: true });
 
 bot.setMyCommands([
   { command: '/digest', description: 'Короткий опис останньої зустрічі' },
   { command: '/poll', description: 'Дефолтне щотижневе опитування' },
-  { command: '/quiz', description: 'Святковий пасхальний квіз' }
+  { command: '/quiz', description: 'Святковий пасхальний квіз' },
+  { command: '/notifyall', description: 'Покликати всіх' }
 ])
 
 let quizID;
@@ -30,13 +32,31 @@ const chatID = '-1001887610786';
 let messageID;
 let currentCorrectAnswer;
 
-const lastDigest = 'https://t.me/c/1588797053/16';
+const lastDigest = 'https://t.me/c/1588797053/18';
 const digestChannel = 'https://t.me/+hv39AdBv7zc4ZTgy';
 
 
 let answers = {};
 let isQuizLaunched = false;
 let isPollLaunched = false;
+
+
+axios.get('https://paintedfoxbot-default-rtdb.europe-west1.firebasedatabase.app/poll.json')
+  .then(response => {
+    console.log('Response:', response.data);
+    for(let key in response.data) {
+      for (let prop in response.data[key]) {
+        isPollLaunched = response.data[key][prop];
+        pollMsgID = prop;
+      }
+
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+  });
+
+
 
 const questionsQuiz = [
   'Яка була причина святкування євреями старо-завітньої Пасхи?',
@@ -89,7 +109,7 @@ bot.on('new_chat_members', (msg) => {
   const stringMembers = newMembersArr.join(', ');
 
 
-  bot.sendMessage(chatID, `Раді вітати тебе, ${stringMembers}! Господь цінить твоє бажання вивчати Боже Слово. Загальну інформацію ти можеш знайти в описі групи. Якщо тобі потрібна моя допомога, користуйся командами в правому нижньому куті чату - [/] або набирай руцями '/'`);
+  bot.sendMessage(chatIDTest, `Раді вітати тебе, ${stringMembers}! Господь цінить твоє бажання вивчати Боже Слово. Загальну інформацію ти можеш знайти в описі групи. Якщо тобі потрібна моя допомога, користуйся командами в правому нижньому куті чату - [/] або набирай руцями '/'`);
 })
 
 
@@ -201,8 +221,18 @@ bot.on('message', async (msg) => {
     }).then(res => {
       pollMsgID = res.message_id;
       bot.pinChatMessage(chatID, pollMsgID, {disable_notification: false});
-      console.log(pollMsgID);
-    })
+    }).then(res1 => {
+      const data = {
+        [pollMsgID]: true
+      }
+      axios.post('https://paintedfoxbot-default-rtdb.europe-west1.firebasedatabase.app/poll.json', data)
+      .then(response => {
+        console.log('Response:', response.data);
+      })
+      .catch(error => {
+        console.error('Error:', error);
+      });
+    });
   } else if (text && text.toLowerCase().startsWith('/poll') && isPollLaunched) {
     bot.sendMessage(chatID, 'Опитування на цей тиждень вже було створене, наступного разу будьте уважніше! 😉');
   }
@@ -212,6 +242,13 @@ bot.on('message', async (msg) => {
     bot.deleteMessage(chatID, messageID);
     bot.stopPoll(chatID, pollMsgID);
     bot.unpinChatMessage(chatID, { message_id: pollMsgID });
+    axios.delete('https://paintedfoxbot-default-rtdb.europe-west1.firebasedatabase.app/poll.json')
+    .then(response => {
+      console.log('Response:', response.data);
+    })
+    .catch(error => {
+      console.error('Error:', error);
+    });
   }
 
   // if (text && text.toLowerCase().startsWith('/pay')) {
@@ -219,11 +256,36 @@ bot.on('message', async (msg) => {
   //     const paid = JSON.stringify(price);
   //     bot.sendInvoice(chatID,'Football', 'Pay for playing Football', 'SOME_PAYLOAD', '844d0883-75b2-4be8-9778-9135ee0a372e', 'UAH', paid);
   // }
+    if (text && text.toLowerCase().startsWith('/notifyall')) {
+      const arrUsersInfo = [];
+      bot.getChatAdministrators(chatIDTest).then(admins => {
+        for(let { user } of admins) {
+          if(!user.is_bot) {
+            arrUsersInfo.push([user.first_name, user.id]);
+          }
+        }
+        let strNotifyAll = ``;
+        for (let [name, id] of arrUsersInfo) {
+          strNotifyAll += `[${name}](tg://user?id=${id}) `;
+        }
+        bot.sendMessage(chatID, strNotifyAll, { parse_mode: 'MarkdownV2' });
+        
+      }).catch(error => {
+        console.error(error);
+      });
+  }
   if (text && text.toLowerCase().startsWith('/delete') && pollMsgID) {
     bot.deleteMessage(chatID, messageID);
     isPollLaunched = false;
     await bot.unpinChatMessage(chatID, { message_id: pollMsgID });
     bot.deleteMessage(chatID, pollMsgID);
+    axios.delete('https://paintedfoxbot-default-rtdb.europe-west1.firebasedatabase.app/poll.json')
+    .then(response => {
+      console.log('Response:', response.data);
+    })
+    .catch(error => {
+      console.error('Error:', error);
+    });
   }
 
   if ((/прошу/i.test(text) && /молитис/i.test(text)) ||
