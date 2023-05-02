@@ -109,7 +109,7 @@ bot.on('new_chat_members', (msg) => {
   const stringMembers = newMembersArr.join(', ');
 
 
-  bot.sendMessage(chatIDTest, `Раді вітати тебе, ${stringMembers}! Господь цінить твоє бажання вивчати Боже Слово. Загальну інформацію ти можеш знайти в описі групи. Якщо тобі потрібна моя допомога, користуйся командами в правому нижньому куті чату - [/] або набирай руцями '/'`);
+  bot.sendMessage(chatID, `Раді вітати тебе, ${stringMembers}! Господь цінить твоє бажання вивчати Боже Слово. Загальну інформацію ти можеш знайти в описі групи. Якщо тобі потрібна моя допомога, користуйся командами в правому нижньому куті чату - [/] або набирай руцями '/'`);
 })
 
 
@@ -258,7 +258,7 @@ bot.on('message', async (msg) => {
   // }
     if (text && text.toLowerCase().startsWith('/notifyall')) {
       const arrUsersInfo = [];
-      bot.getChatAdministrators(chatIDTest).then(admins => {
+      bot.getChatAdministrators(chatID).then(admins => {
         for(let { user } of admins) {
           if(!user.is_bot) {
             arrUsersInfo.push([user.first_name, user.id]);
